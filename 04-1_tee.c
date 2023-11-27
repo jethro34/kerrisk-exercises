@@ -1,40 +1,45 @@
 // The Linux Programming Interface - M. Kerrisk * Ex 4.1/p. 87
 
+#include <err.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define BUFFER_SIZE 64
+#define BUFFER_SIZE 1024
 
 int main(int argc, char* argv[])
 {
-  if (argc != 2) {
-    printf("Usage: %s outputfile", argv[0]);
-    exit(0);
-  }
+  // check usage
+  if (argc != 2) err(0, "Usage: %s outputfile", argv[0]);
 
-  int outfd, numBs;
+  // variable declarations
+  int outfd, numBs;   // file descriptor & bytes read/written
+  char* buffer;       // buffer string
 
-  if ((outfd = open(argv[1], O_CREAT | O_WRONLY | O_TRUNC)) == -1)
-    perror("failure opening output file");
-  
-  char* buffer[BUFFER_SIZE+1];
-  for (int i=0; i<BUFFER_SIZE+1; i++)
-    buffer[i] = malloc(sizeof(char));
+  // dynamically allocate memory for buffer
+  buffer = malloc((BUFFER_SIZE+1) * sizeof(char));
+  if (buffer == NULL) err(1, "failure mallocking");
 
+  // get input & load it to buffer
   if ((numBs = read(STDIN_FILENO, buffer, BUFFER_SIZE)) == -1)
-    perror("failure reading from input file");
-  buffer[numBs] = '\0'; 
+    err(1, "failure reading from input file");
+  buffer[numBs] = '\0';   // null-terminate buffer
 
+  // open output file for writing
+  if ((outfd = open(argv[1], O_CREAT | O_WRONLY | O_TRUNC)) == -1)
+    err(1, "failure opening output file");
+ 
+  // write buffer to stdout
   if ((numBs = write(STDOUT_FILENO, buffer, numBs)) == -1)
-    perror("failure writing to stdout");
-  if ((numBs = write(outfd, buffer, numBs)) == -1)
-    perror("failure writing to output file");
+    err(1, "failure writing to stdout");
 
-  for (int i=0; i<BUFFER_SIZE+1; i++)
-    free(buffer[i]);
+  // write buffer to ouput file
+  if ((numBs = write(outfd, buffer, numBs)) == -1)
+    err(1, "failure writing to output file");
+
+  free(buffer);   // free dynamically allocated memory
 
   return 0;
 }
